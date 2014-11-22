@@ -61,18 +61,63 @@
     
     self.statusLabel.text = @"Let the game begin !";
 }
+- (IBAction)handleHintButton:(id)sender {
+    NSMutableArray * set = [self.game getMatchingSetCards];
+    NSMutableArray * views = [[NSMutableArray alloc] init];
+    if([set count] != 3) {
+        self.statusLabel.text = @"No set found";
+        return;
+    }
+    
+    for (SetCard * card in set) {
+        for (SetCardView * view in self.cardViews) {
+            if([card.shade isEqualToString:view.shading] && [card.shape isEqualToString:view.shape] && card.count == view.count && [card.color isEqual:view.color]) {
+                [views addObject:view];
+            }
+        }
+    }
+    for (SetCardView * v in views) {
+        CGAffineTransform translateRight = CGAffineTransformTranslate(CGAffineTransformMakeScale(1.05, 1.05), 1, 0.0);
+        CGAffineTransform translateLeft = CGAffineTransformTranslate(CGAffineTransformMakeScale(self.scale, self.scale), 1, 0.0);
+        
+        v.transform = translateLeft;
+        
+        [UIView animateWithDuration:.3 delay:0.0 options:UIViewAnimationOptionAutoreverse|UIViewAnimationOptionRepeat animations:^{
+            [UIView setAnimationRepeatCount:1.0];
+            v.transform = translateRight;
+        } completion:^(BOOL finished) {
+            if (finished) {
+                // [UIView animateWithDuration:0. delay:0.0 options:UIViewAnimationOptionBeginFromCurrentState animations:^{
+                // v.transform = CGAffineTransformIdentity;//ORIGINAL LINE
+                v.transform = CGAffineTransformMakeScale(self.scale, self.scale);
+                //v.transform = CGAffineTransformMakeScale(1, 1);
+                //   } completion:NULL];
+            }
+        }
+         ];
+        //[self shakeView:v];
+    }
+    
+    
+}
 
 - (void)didRotateFromInterfaceOrientation:(UIInterfaceOrientation)fromInterfaceOrientation {
     NSLog(@"Yippie !!, screen width:%d",self.screenWidthRemaining);
     if([self canPlaceCards:[self.cardViews count] withSize:CGSizeMake(70, 90) horizontalSpacing:GAP_BETWEEN_CARDS_X verticalSpacing:GAP_BETWEEN_CARDS_Y enableFullScreen:TRUE]) {
-        [self reDisplayAllCards];
+        if(self.scale != 1.0) {
+            self.scale = 1.0;
+            [self reSizeAllCardViews];
+        } else {
+            NSLog(@"Re displaying big cards");
+            [self reDisplayAllCards];
+        }
     } else if (self.scale == 1) {
         self.scale = 0.8;
         [self reSizeAllCardViews];
     } else {
         [self reDisplayAllCards];
     }
-
+    
 }
 
 - (void) initializeGlobalVariables {
@@ -91,8 +136,13 @@
 
 - (void) getCardsFromModel:(int) count usingDeck:(SetDeck *) deck {
     NSMutableArray * newCards = [self.game addSetCardsUsingDeck:deck cardCount:count];
-    for (SetCard * card in newCards) {
-        [self addCardToCardsViewArray:card];
+    if([newCards count] != 0) {
+        for (SetCard * card in newCards) {
+            [self addCardToCardsViewArray:card];
+        }
+    } else {
+        NSLog(@"changing status");
+        self.statusLabel.text = @"Find existing match first";
     }
     [self updateUI];
 }
@@ -103,9 +153,13 @@
     } else {
         if(self.cardWidth == 70) {
             if([self canPlaceCards:[[self cardViews] count]+3 withSize:CGSizeMake(self.cardWidth*0.8, self.cardHeight*0.8) horizontalSpacing:GAP_BETWEEN_CARDS_X verticalSpacing:GAP_BETWEEN_CARDS_Y enableFullScreen:TRUE]) {
+                int cardCount = [self.cardViews count];
                 [self getCardsFromModel:3 usingDeck:self.deck];
-                self.scale = 0.8;
-                [self reSizeAllCardViews];
+                
+                if([self.cardViews count] != cardCount) {
+                    self.scale = 0.8;
+                    [self reSizeAllCardViews];
+                }
             } else {
                 NSLog(@"Card fit in that many cards even if card size is small");
             }
@@ -113,13 +167,14 @@
             NSLog(@"Card size is already small, cant add new cards");
         }
     }
+    self.statusLabel.text = @"";
 }
 - (void) reSizeAllCardViews {
     for (SetCardView * view in self.cardViews) {
         view.transform = CGAffineTransformMakeScale(self.scale, self.scale);
         self.cardWidth = view.frame.size.width;
         self.cardHeight = view.frame.size.height;
-        NSLog(@"resizing, card width %d, card height %d", self.cardWidth, self.cardHeight);
+        //NSLog(@"resizing, card width %d, card height %d", self.cardWidth, self.cardHeight);
     }
     
     [self reDisplayAllCards];
@@ -130,7 +185,7 @@
     //NSLog(@"--addCArdstoCardsArray, x%d, y%d", self.cardOrigin_xaxis, self.cardOrigin_yaxis);
     CGRect cardRect = CGRectMake(self.cardOrigin_xaxis, self.cardOrigin_yaxis, 70, 90);
     //[self updateCoordinatesForNextCard];
-
+    
     
     SetCardView * card = [[SetCardView alloc] initWithFrame:cardRect];
     card.shape = setCard.shape;
@@ -142,11 +197,11 @@
     card.transform = CGAffineTransformMakeScale(self.scale,self.scale);
     card.center = CGPointMake(self.cardOrigin_xaxis + card.frame.size.width / 2, self.cardOrigin_yaxis + card.frame.size.height / 2);
     /*
-    
-    CGPoint center = card.center;
-    card.transform = CGAffineTransformMakeScale(2, 2);
-    card.center = center;
-    */
+     
+     CGPoint center = card.center;
+     card.transform = CGAffineTransformMakeScale(2, 2);
+     card.center = center;
+     */
     self.cardWidth = card.frame.size.width;
     self.cardHeight = card.frame.size.height;
     
@@ -157,9 +212,6 @@
     [self.cardViews addObject:card];
     [self.displayArea  addSubview:card];
 }
-
-
-
 
 
 - (void) updateCoordinatesForCardWithSize:(CGSize)cardSize horizontalSpacing:(int) xGap verticalSpacing:(int)yGap {
@@ -182,7 +234,7 @@
 
 - (void) reDisplaySingleCard:(SetCardView *)cardView {
     [self updateCoordinatesForCardWithSize:CGSizeMake(self.cardWidth, self.cardHeight) horizontalSpacing:GAP_BETWEEN_CARDS_X verticalSpacing:GAP_BETWEEN_CARDS_Y];
-    NSLog(@"--card size, x %d, y %d", self.cardWidth, self.cardHeight);
+    //NSLog(@"--card size, x %d, y %d", self.cardWidth, self.cardHeight);
     //NSLog(@"update cordinates result x %d, y%d", self.cardOrigin_xaxis, self.cardOrigin_yaxis);
     CGPoint origin = CGPointMake(self.cardOrigin_xaxis, self.cardOrigin_yaxis);
     [UIView animateWithDuration:0.5f animations:^{
@@ -273,6 +325,9 @@
     self.cardOrigin_yaxis =cardOrigin_y;
 }
 
+
+
+
 - (void) updateUI {
     NSMutableArray * cards = [self.game getSetCardsInGame];
     NSMutableArray * indexesOfMatchedCards = [[NSMutableArray alloc] init];
@@ -300,10 +355,12 @@
         for (SetCardView * cardView in viewsToShake) {
             [self shakeView:cardView];//TODO: put back shake after figuring out the solution
         }
+        [self.game clearMisMatchedCards];
     } else if ([indexesOfMatchedCards count] > 0) {
         [self removeCardsAtIndexes:indexesOfMatchedCards];
         //[self reDisplayAllCards];
     }
+    self.statusLabel.text = [self.game getStatusMessage];
 }
 
 // this from here : http://stackoverflow.com/questions/1632364/shake-visual-effect-on-iphone-not-shaking-the-device
@@ -321,7 +378,7 @@
     viewToShake.transform = translateLeft;
     
     [UIView animateWithDuration:0.07 delay:0.0 options:UIViewAnimationOptionAutoreverse|UIViewAnimationOptionRepeat animations:^{
-        [UIView setAnimationRepeatCount:7.0];
+        [UIView setAnimationRepeatCount:3.0];
         viewToShake.transform = translateRight;
     } completion:^(BOOL finished) {
         if (finished) {
@@ -412,7 +469,7 @@
 }
 
 - (SetGame *) game {
-    if (!_game) _game = [[SetGame alloc] initSetGamewithCardCount:9 usingDeck:self.deck];
+    if (!_game) _game = [[SetGame alloc] initSetGamewithCardCount:12 usingDeck:self.deck];
     return _game;
 }
 

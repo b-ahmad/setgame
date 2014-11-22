@@ -22,6 +22,10 @@
 
 @implementation SetGame
 
+- (void) clearMisMatchedCards {
+    [self.mismatchedCards removeAllObjects];
+}
+
 - (instancetype) initSetGamewithCardCount:(int)count usingDeck:(SetDeck *)deck {
     
     self = [super init];
@@ -39,9 +43,11 @@
 }
 
 - (NSMutableArray *) addSetCardsUsingDeck:(SetDeck *)deck cardCount:(int)count {
+    self.statusMsg = @"";
     NSMutableArray * newCards = [[NSMutableArray alloc] init];
     if([[self getMatchingSetCards] count] == 3) {
-        //return newCards;
+        
+        return newCards;
     }
     for (int i = 0; i < count; i++) {
         Card * card = [deck drawRandomCard];
@@ -126,7 +132,7 @@
     self.statusMsg = @"Count mismatch";    
     if ((card1.count == card2.count && card2.count == card3.count) ||
         (card1.count != card2.count && card2.count != card3.count && card3.count != card1.count)) {
-        return TRUE;
+        
         
         self.statusMsg = @"Shading mismatch";
         if (([card1.shade isEqualToString:card2.shade] && [card2.shade isEqualToString:card3.shade]) ||
@@ -139,7 +145,7 @@
                 self.statusMsg = @"Colors mismatch";
                 if (([card1.color isEqual:card2.color] && [card2.color isEqual:card3.color]) ||
                     (![card1.color isEqual:card2.color] && ![card2.color isEqual:card3.color] && ![card3.color isEqual:card1.color])) {
-                    
+                    return TRUE;
                     
                 }
             }

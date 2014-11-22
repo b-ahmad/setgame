@@ -22,6 +22,8 @@
 - (NSString *) getStatusMessage;
 - (NSMutableArray *)getMismatchedCards;
 - (NSMutableArray *) getMatchingSetCards;
+- (void) clearMisMatchedCards;
+- (NSMutableArray *)getHintedCards;
 - (SetCard *) hint;
 
 @end
