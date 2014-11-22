@@ -64,7 +64,13 @@
 
 - (void)didRotateFromInterfaceOrientation:(UIInterfaceOrientation)fromInterfaceOrientation {
     NSLog(@"Yippie !!, screen width:%d",self.screenWidthRemaining);
-    [self reDisplayAllCards];
+    if([self canPlaceCards:[self.cardViews count] withSize:CGSizeMake(70, 90) horizontalSpacing:GAP_BETWEEN_CARDS_X verticalSpacing:GAP_BETWEEN_CARDS_Y enableFullScreen:TRUE]) {
+        [self reDisplayAllCards];
+    } else if (self.scale == 1) {
+        self.scale = 0.8;
+        [self reSizeAllCardViews];
+    }
+
 }
 
 - (void) initializeGlobalVariables {
@@ -230,6 +236,14 @@
         [self.game removeSetCardAtIndex:[index integerValue]]; //remove this card from the model/game as well
     }
     
+    //---
+    if([self canPlaceCards:[self.cardViews count] withSize:CGSizeMake(70, 90) horizontalSpacing:GAP_BETWEEN_CARDS_X verticalSpacing:GAP_BETWEEN_CARDS_Y enableFullScreen:TRUE]) {
+        self.scale = 1.0;
+        [self reSizeAllCardViews];
+    } else {
+        [self reDisplayAllCards];
+    }
+    
 }
 
 - (void) updateNumberofCardRows {
@@ -286,7 +300,7 @@
         }
     } else if ([indexesOfMatchedCards count] > 0) {
         [self removeCardsAtIndexes:indexesOfMatchedCards];
-        [self reDisplayAllCards];
+        //[self reDisplayAllCards];
     }
 }
 
