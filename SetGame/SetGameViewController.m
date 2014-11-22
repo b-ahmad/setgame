@@ -41,7 +41,6 @@
 
 @implementation SetGameViewController
 
-
 # define GAP_BETWEEN_CARDS_X 5
 # define GAP_BETWEEN_CARDS_Y 5
 # define LEFT_PADDING 0
@@ -55,10 +54,13 @@
     [self.displayArea setNeedsLayout];
     [self.displayArea layoutIfNeeded];
     NSLog(@"display width : %f",self.displayArea.window.screen.bounds.size.width);
-
+    
     [self initializeGlobalVariables];
     
     for (SetCard * card in [self.game getSetCardsInGame]) {
+        self.cardWidth *= self.scale;
+        self.cardHeight *= self.scale;
+        [self updateCoordinatesForCardWithSize:CGSizeMake(self.cardWidth, self.cardHeight) horizontalSpacing:GAP_BETWEEN_CARDS_X verticalSpacing:GAP_BETWEEN_CARDS_Y];
         [self addCardToCardsViewArray:card];
     }
     
@@ -68,7 +70,50 @@
 
 - (void)didRotateFromInterfaceOrientation:(UIInterfaceOrientation)fromInterfaceOrientation {
     NSLog(@"Yippie !!");
+    /*
+     [self.displayArea setNeedsLayout];
+     [self.displayArea layoutIfNeeded];
+     self.screenWidthRemaining = self.displayArea.frame.size.width;
+     self.screenHeightRemaining = self.displayArea.frame.size.height;
+     */
     [self reDisplayAllCards];
+}
+
+
+
+- (void) increase {
+    if(self.cardWidth == 70) {
+        NSLog(@"Card width is 70 so not increasing size");
+        return;
+    } else {
+        NSLog(@"Card width is NOT 70, so checking if size can be increased");
+    }
+    
+    [self.displayArea setNeedsLayout];
+    [self.displayArea layoutIfNeeded];
+    
+    int displayWidth_backup = self.screenWidthRemaining;
+    int displayHeight_backup = self.screenHeightRemaining;
+    int cardWidth_backup = self.cardWidth;
+    int cardHeight_backup = self.cardHeight;
+    
+    self.screenWidthRemaining = self.displayArea.frame.size.width;
+    self.screenHeightRemaining = self.displayArea.frame.size.height;
+    self.cardWidth = 70;
+    self.cardHeight = 90;
+    
+    if([self canPlaceCards:[self.cardViews count] withSize:CGSizeMake(70, 90) horizontalSpacing:GAP_BETWEEN_CARDS_X verticalSpacing:GAP_BETWEEN_CARDS_Y enableFullScreen:TRUE]) {
+        self.scale = 1.0;
+        [self reSizeCardViews];
+        return;
+    }
+    
+    self.screenWidthRemaining =   displayWidth_backup;
+    self.screenHeightRemaining =  displayHeight_backup;
+    self.cardWidth = cardWidth_backup;
+    self.cardHeight = cardHeight_backup;
+    
+    
 }
 
 - (void) initializeGlobalVariables {
@@ -77,7 +122,7 @@
     self.cardOrigin_xaxis = LEFT_PADDING;
     self.cardOrigin_yaxis = TOP_PADDING;
     self.screenWidthRemaining = self.displayArea.frame.size.width;
-    self.screenHeightRemaining = self.displayArea.frame.size.height - self.cardHeight;
+    self.screenHeightRemaining = self.displayArea.frame.size.height;
     self.numberOfCardsInRow = 1;
     self.numberOfCardsInCol = 1;
     self.scale = 1.0;
@@ -85,82 +130,68 @@
     NSLog(@"display width : %d",self.screenWidthRemaining);
 }
 
-- (BOOL) canDisplayOneCard {
-   // int width = self.displayArea.frame.size.width;
-    //int height = self.displayArea.frame.size.height;
-    [self updateCoordinatesForNextCard];
-    NSLog(@"height remianig : %d", self.screenHeightRemaining);
-    BOOL result = (self.screenHeightRemaining > 0);
-    
-    //self.screenHeightRemaining = height;
-    //self.screenWidthRemaining = width;
-    return result;
-}
-
 - (IBAction)addMoreCards:(id)sender {
-    BOOL r = FALSE;
-    
-    int width = self.screenWidthRemaining;
-    int height = self.screenHeightRemaining;
-    int x = self.cardOrigin_xaxis;
-    int y = self.cardOrigin_yaxis;
-    
-    //self.screenWidthRemaining = self.displayArea.frame.size.width;
-    //self.screenHeightRemaining = self.displayArea.frame.size.height;
-    
-    for (int i=0; i<3; i++) {
-        r = [self canDisplayOneCard];
-    }
-    
-    self.screenHeightRemaining = height;
-    self.screenWidthRemaining = width;
-    self.cardOrigin_xaxis = x;
-    self.cardOrigin_yaxis = y;
-
-    
-    if(self.cardWidth != 70) {
-    
-        if(!r) {
-            NSLog(@"No space to place card");
-
-            return;
+    if([self canPlaceCards:3 withSize:CGSizeMake(self.cardWidth, self.cardHeight) horizontalSpacing:GAP_BETWEEN_CARDS_X verticalSpacing:GAP_BETWEEN_CARDS_Y enableFullScreen:FALSE]) {
+        //NSLog(@"BUT PRESSED");
+        NSMutableArray * newCards = [self.game addSetCardsUsingDeck:self.deck cardCount:3];
+        if([newCards count] == 0) {
+            //self.addMoreCards.enabled = NO;
         }
+        for (SetCard * card in newCards) {
+            [self updateCoordinatesForCardWithSize:CGSizeMake(self.cardWidth, self.cardHeight) horizontalSpacing:GAP_BETWEEN_CARDS_X verticalSpacing:GAP_BETWEEN_CARDS_Y];
+            [self addCardToCardsViewArray:card];
+        }
+        [self updateUI];
+    } else {
+        if(self.cardWidth == 70) {
+            int tmpCardWidth = self.cardWidth;
+            int tmpCardHeight = self.cardHeight;
+            if([self canPlaceCards:[[self cardViews] count]+3 withSize:CGSizeMake(self.cardWidth*0.8, self.cardHeight*0.8) horizontalSpacing:GAP_BETWEEN_CARDS_X verticalSpacing:GAP_BETWEEN_CARDS_Y enableFullScreen:TRUE]) {
+                NSLog(@"Resizing cards to make room");
+                NSMutableArray * newCards = [self.game addSetCardsUsingDeck:self.deck cardCount:3];
+                if([newCards count] == 0) {
+                    //self.addMoreCards.enabled = NO;
+                }
+                for (SetCard * card in newCards) {
+                    [self updateCoordinatesForCardWithSize:CGSizeMake(self.cardWidth, self.cardHeight) horizontalSpacing:GAP_BETWEEN_CARDS_X verticalSpacing:GAP_BETWEEN_CARDS_Y];
+                    [self addCardToCardsViewArray:card];
+                }
+                
+                self.scale = 0.8;
+                [self reSizeCardViews];
+                
+                
+            } else {
+                NSLog(@"Card even place that many small cards, sorry: width: %f", self.displayArea.frame.size.width);
+                
+            }
+            
+        } else {
+            NSLog(@"Card is already small, cant add more");
+        }
+        
     }
-
-    
-    //NSLog(@"BUT PRESSED");
-    NSMutableArray * newCards = [self.game addSetCardsUsingDeck:self.deck cardCount:3];
-    if([newCards count] == 0) {
-        //self.addMoreCards.enabled = NO;
-    }
-    for (SetCard * card in newCards) {
-        [self addCardToCardsViewArray:card];
-    }
-    if([self cardViewsNeedReSize]) {
-        [self reSizeCardViews];
-    }
-    [self updateUI];
 }
+
 
 - (void) addCardToCardsViewArray:(SetCard *) setCard {
-    /*if(![self canDisplayAnotherCardView]) {
-        NSLog(@"No space to display new cards");
-        self.statusLabel.text = @"out of space";
-        if([self cardViewsNeedReSize]) {
-            [self reSizeCardViews];
-        }
-        if(![self canDisplayAnotherCardView]) {
-            return;
-        }
-    }*/
-    CGRect cardRect = CGRectMake(self.cardOrigin_xaxis, self.cardOrigin_yaxis, self.cardWidth, self.cardHeight);
-    [self updateCoordinatesForNextCard];
+    //CGRect cardRect = CGRectMake(self.cardOrigin_xaxis, self.cardOrigin_yaxis, self.cardWidth, self.cardHeight);
+    CGRect cardRect = CGRectMake(self.cardOrigin_xaxis, self.cardOrigin_yaxis, 70, 90);
+    //[self updateCoordinatesForNextCard];
+    NSLog(@"placed card at x %d, y %d", self.cardOrigin_xaxis, self.cardOrigin_yaxis);
+
     
     SetCardView * card = [[SetCardView alloc] initWithFrame:cardRect];
     card.shape = setCard.shape;
     card.shading = setCard.shade;
     card.color = setCard.color;
     card.count = setCard.count;
+    
+    
+    card.transform = CGAffineTransformMakeScale(self.scale, self.scale);
+    self.cardWidth = card.frame.size.width;
+    self.cardHeight = card.frame.size.height;
+    
     
     UITapGestureRecognizer *fingerTap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleSingleTap:)];
     [card addGestureRecognizer:fingerTap];
@@ -169,7 +200,66 @@
     [self.displayArea  addSubview:card];
 }
 
+- (BOOL) canPlaceCards:(int) count withSize:(CGSize)cardSize horizontalSpacing:(int) xGap verticalSpacing:(int)yGap enableFullScreen:(BOOL) fullScreen{
+    int width_remaining = self.screenWidthRemaining;
+    int height_remaining = self.screenHeightRemaining;
+    int cardOrigin_x = self.cardOrigin_xaxis;
+    int cardOrigin_y = self.cardOrigin_yaxis;
+    
+    if (fullScreen) {
+        self.screenWidthRemaining = self.displayArea.frame.size.width;
+        self.screenHeightRemaining = self.displayArea.frame.size.height;
+        self.cardOrigin_xaxis = LEFT_PADDING;
+        self.cardOrigin_yaxis = TOP_PADDING;
+    }
+    
+    for (int i = 0; i < count; i++) {
+        if ([self canPlaceCardWithSize:cardSize horizontalSpacing:xGap verticalSpacing:yGap]) {
+            [self updateCoordinatesForCardWithSize:cardSize horizontalSpacing:xGap verticalSpacing:yGap];
+        } else {
+            NSLog(@"Unable to place %d cards, failed on %d card", count, i);
+            return FALSE;
+        }
+    }
+    
+    self.screenWidthRemaining = width_remaining;
+    self.screenHeightRemaining = height_remaining;
+    self.cardOrigin_xaxis = cardOrigin_x;
+    self.cardOrigin_yaxis =cardOrigin_y;
+    NSLog(@"Can place %d cards", count);
+    return TRUE;
+}
 
+- (BOOL) canPlaceCardWithSize:(CGSize)cardSize horizontalSpacing:(int) xGap verticalSpacing:(int)yGap {
+    if (self.screenWidthRemaining >= (cardSize.width + xGap)) {
+        return TRUE;
+    } else if (self.screenHeightRemaining >= (cardSize.height + yGap)) {
+        return TRUE;
+    } else {
+        return FALSE;
+    }
+}
+
+- (void) updateCoordinatesForCardWithSize:(CGSize)cardSize horizontalSpacing:(int) xGap verticalSpacing:(int)yGap {
+    if(self.screenWidthRemaining == self.displayArea.frame.size.width && self.screenHeightRemaining == self.displayArea.frame.size.height) {
+        self.screenHeightRemaining -= (cardSize.height + yGap);
+        self.screenWidthRemaining -= (cardSize.width + xGap);
+    } else if (self.screenWidthRemaining >= (cardSize.width + xGap)) {
+        
+        //NSLog(@"%d is greater than %f", self.screenWidthRemaining, cardSize.width);
+        self.cardOrigin_xaxis += cardSize.width + xGap;
+        self.screenWidthRemaining -= (cardSize.width + xGap);
+        if(self.numberOfCardsInCol == 1) {self.numberOfCardsInRow++;}
+    } else {
+        self.cardOrigin_xaxis = LEFT_PADDING;
+        self.cardOrigin_yaxis += cardSize.height + yGap;
+        self.screenWidthRemaining = self.displayArea.frame.size.width - cardSize.width - xGap;
+        self.screenHeightRemaining -= (cardSize.height + yGap);
+        //NSLog(@"Card will be placed in next row");
+        self.numberOfCardsInCol++;
+    }
+    //NSLog(@"width remaining : %d", self.screenWidthRemaining);
+}
 
 - (void) updateCoordinatesForNextCard {
     self.screenWidthRemaining -= self.cardWidth + GAP_BETWEEN_CARDS_X;
@@ -182,12 +272,30 @@
     } else {
         self.screenWidthRemaining = self.displayArea.frame.size.width;
         self.screenHeightRemaining -= (self.cardHeight + GAP_BETWEEN_CARDS_Y);
-        self.numberOfCardsInCol++;
+        
         
         self.cardOrigin_xaxis = LEFT_PADDING;
         self.cardOrigin_yaxis += (self.cardHeight + GAP_BETWEEN_CARDS_Y);
     }
 }
+
+- (void) addAndDisplayCard:(SetCard *) setCard {
+    [self updateCoordinatesForCardWithSize:CGSizeMake(self.cardWidth, self.cardHeight) horizontalSpacing:GAP_BETWEEN_CARDS_X verticalSpacing:GAP_BETWEEN_CARDS_Y];
+    CGRect cardRect = CGRectMake(self.cardOrigin_xaxis, self.cardOrigin_yaxis, self.cardWidth, self.cardHeight);
+    SetCardView * cardView = [[SetCardView alloc] initWithFrame:cardRect];
+    cardView.shape = setCard.shape;
+    cardView.shading = setCard.shade;
+    cardView.color = setCard.color;
+    cardView.count = setCard.count;
+    
+    UITapGestureRecognizer *fingerTap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleSingleTap:)];
+    [cardView addGestureRecognizer:fingerTap];
+    
+    [self.cardViews addObject:cardView];
+    [self.displayArea  addSubview:cardView];
+}
+
+
 
 - (BOOL) cardViewsNeedReSize {
     //NSLog(@"screen hight : %d", self.screenHeightRemaining);
@@ -200,8 +308,12 @@
 
 - (BOOL) cardViewsNeedSizeIncrease {
     if(self.cardWidth == 70) {
+        NSLog(@"Card width is 70 so not increasing size");
         return FALSE;
+    } else {
+        NSLog(@"Card width is NOT 70, so checking if size can be increased");
     }
+    
     [self.displayArea setNeedsLayout];
     [self.displayArea layoutIfNeeded];
     
@@ -209,13 +321,14 @@
     int displayHeight_backup = self.screenHeightRemaining;
     int cardWidth_backup = self.cardWidth;
     int cardHeight_backup = self.cardHeight;
-        
+    
     self.screenWidthRemaining = self.displayArea.frame.size.width;
     self.screenHeightRemaining = self.displayArea.frame.size.height;
     self.cardWidth = 70;
     self.cardHeight = 90;
     
     for (SetCardView * view in self.cardViews) {
+        NSLog(@"Testing if we can fit %d cards", [self.cardViews count]);
         [self updateCoordinatesForNextCard];
     }
     
@@ -227,7 +340,7 @@
     self.screenHeightRemaining =  displayHeight_backup;
     self.cardWidth = cardWidth_backup;
     self.cardHeight = cardHeight_backup;
-
+    
     return result;
 }
 
@@ -243,22 +356,24 @@
     [UIView animateWithDuration:0.5f animations:^{
         cardView.center = CGPointMake(origin.x + cardView.frame.size.width / 2, origin.y + cardView.frame.size.height / 2);
     }];
-    
-    [self updateCoordinatesForNextCard];
+
+    //[self updateCoordinatesForNextCard];
 }
 
 
 - (void) reDisplayAllCards {
-    self.screenWidthRemaining = [self.displayArea bounds].size.width;
-    self.screenHeightRemaining = [self.displayArea bounds].size.height - self.cardHeight;
+    self.screenWidthRemaining = self.displayArea.frame.size.width;
+    self.screenHeightRemaining = self.displayArea.frame.size.height;
     self.cardOrigin_xaxis = LEFT_PADDING;
     self.cardOrigin_yaxis = TOP_PADDING;
     self.numberOfCardsInRow = 1;
     self.numberOfCardsInCol = 1;
     
     for (int i=0; i<[self.cardViews count]; i++) {
+        [self updateCoordinatesForCardWithSize:CGSizeMake(self.cardWidth, self.cardHeight) horizontalSpacing:GAP_BETWEEN_CARDS_X verticalSpacing:GAP_BETWEEN_CARDS_Y];
         [self reDisplaySingleCard:[self.cardViews objectAtIndex:i]];
     }
+    NSLog(@"After all cards are redisplayed, x %d, y %d, card widht %d", self.cardOrigin_xaxis, self.cardOrigin_yaxis, self.cardWidth);
 }
 
 // assumption it'll only be required when adding 3 more cards
@@ -267,8 +382,9 @@
         view.transform = CGAffineTransformMakeScale(self.scale, self.scale);
         self.cardWidth = view.frame.size.width;
         self.cardHeight = view.frame.size.height;
+        NSLog(@"resizing, card width %d, card height %d", self.cardWidth, self.cardHeight);
     }
-
+    
     [self reDisplayAllCards];
 }
 
@@ -306,12 +422,17 @@
     }
     
     //check if cardview size can be increased
-    if ([self cardViewsNeedSizeIncrease]) {
-        NSLog(@"Card size can be increased");
-        [self increaseScale];
-    } else {
-        NSLog(@"Card size can NOT increased");
-    }
+    //if ([self cardViewsNeedSizeIncrease]) {
+    //   NSLog(@"Card size can be increased");
+    //  [self increaseScale];
+    //} else {
+    //   NSLog(@"Card size can NOT increased");
+    //}
+    [self increase];
+    
+}
+
+- (void) cardSizeIncrease {
     
 }
 
@@ -428,7 +549,7 @@
 
 
 - (SetGame *) game {
-    if (!_game) _game = [[SetGame alloc] initSetGamewithCardCount:6 usingDeck:self.deck];
+    if (!_game) _game = [[SetGame alloc] initSetGamewithCardCount:9 usingDeck:self.deck];
     return _game;
 }
 
