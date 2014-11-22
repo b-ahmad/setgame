@@ -69,6 +69,8 @@
     } else if (self.scale == 1) {
         self.scale = 0.8;
         [self reSizeAllCardViews];
+    } else {
+        [self reDisplayAllCards];
     }
 
 }
@@ -296,12 +298,39 @@
     
     if ([viewsToShake count] > 0) {
         for (SetCardView * cardView in viewsToShake) {
-            //[self shakeView:cardView];//TODO: put back shake after figuring out the solution
+            [self shakeView:cardView];//TODO: put back shake after figuring out the solution
         }
     } else if ([indexesOfMatchedCards count] > 0) {
         [self removeCardsAtIndexes:indexesOfMatchedCards];
         //[self reDisplayAllCards];
     }
+}
+
+// this from here : http://stackoverflow.com/questions/1632364/shake-visual-effect-on-iphone-not-shaking-the-device
+- (void)shakeView:(UIView *)viewToShake
+{
+    CGFloat t = 1.0;
+    //CGAffineTransform translateRight  = CGAffineTransformTranslate(CGAffineTransformIdentity, t, 0.0);
+    //CGAffineTransform translateLeft = CGAffineTransformTranslate(CGAffineTransformIdentity, -t, 0.0);
+    
+    //TODO should not use scale here
+    
+    CGAffineTransform translateRight  = CGAffineTransformTranslate(CGAffineTransformMakeScale(self.scale, self.scale), t, 0.0);
+    CGAffineTransform translateLeft = CGAffineTransformTranslate(CGAffineTransformMakeScale(self.scale, self.scale), -t, 0.0);
+    
+    viewToShake.transform = translateLeft;
+    
+    [UIView animateWithDuration:0.07 delay:0.0 options:UIViewAnimationOptionAutoreverse|UIViewAnimationOptionRepeat animations:^{
+        [UIView setAnimationRepeatCount:7.0];
+        viewToShake.transform = translateRight;
+    } completion:^(BOOL finished) {
+        if (finished) {
+            [UIView animateWithDuration:0.05 delay:0.0 options:UIViewAnimationOptionBeginFromCurrentState animations:^{
+                //viewToShake.transform = CGAffineTransformIdentity;//ORIGINAL LINE
+                viewToShake.transform = CGAffineTransformMakeScale(self.scale, self.scale);
+            } completion:NULL];
+        }
+    }];
 }
 
 //---- ----- ---- ----- ----- ------ -----
