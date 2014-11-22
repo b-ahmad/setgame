@@ -12,6 +12,7 @@
 #import "SetCard.h"
 #import "SetGame.h"
 #import "CardsDisplayArea.h"
+#import <QuartzCore/QuartzCore.h>
 
 
 @interface SetGameViewController ()
@@ -62,7 +63,7 @@
 }
 
 - (void)didRotateFromInterfaceOrientation:(UIInterfaceOrientation)fromInterfaceOrientation {
-    NSLog(@"Yippie !!, screen width:%f",self.screenWidthRemaining);
+    NSLog(@"Yippie !!, screen width:%d",self.screenWidthRemaining);
     [self reDisplayAllCards];
 }
 
@@ -91,25 +92,34 @@
 - (IBAction)addMoreCards:(id)sender {
     if([self canPlaceCards:3 withSize:CGSizeMake(self.cardWidth, self.cardHeight) horizontalSpacing:GAP_BETWEEN_CARDS_X verticalSpacing:GAP_BETWEEN_CARDS_Y enableFullScreen:FALSE]) {
         [self getCardsFromModel:3 usingDeck:self.deck];
-    } /*else {
+    } else {
         if(self.cardWidth == 70) {
             if([self canPlaceCards:[[self cardViews] count]+3 withSize:CGSizeMake(self.cardWidth*0.8, self.cardHeight*0.8) horizontalSpacing:GAP_BETWEEN_CARDS_X verticalSpacing:GAP_BETWEEN_CARDS_Y enableFullScreen:TRUE]) {
-                NSMutableArray * newCards = [self.game addSetCardsUsingDeck:self.deck cardCount:3];
                 [self getCardsFromModel:3 usingDeck:self.deck];
+                self.scale = 0.8;
+                [self reSizeAllCardViews];
             } else {
                 NSLog(@"Card fit in that many cards even if card size is small");
             }
         } else {
             NSLog(@"Card size is already small, cant add new cards");
         }
-    }*/
-    else {
-        NSLog(@"Cant add more cards");
     }
+}
+- (void) reSizeAllCardViews {
+    for (SetCardView * view in self.cardViews) {
+        view.transform = CGAffineTransformMakeScale(self.scale, self.scale);
+        self.cardWidth = view.frame.size.width;
+        self.cardHeight = view.frame.size.height;
+        NSLog(@"resizing, card width %d, card height %d", self.cardWidth, self.cardHeight);
+    }
+    
+    [self reDisplayAllCards];
 }
 
 - (void) addCardToCardsViewArray:(SetCard *) setCard {
     [self updateCoordinatesForCardWithSize:CGSizeMake(self.cardWidth, self.cardHeight) horizontalSpacing:GAP_BETWEEN_CARDS_X verticalSpacing:GAP_BETWEEN_CARDS_Y];
+    //NSLog(@"--addCArdstoCardsArray, x%d, y%d", self.cardOrigin_xaxis, self.cardOrigin_yaxis);
     CGRect cardRect = CGRectMake(self.cardOrigin_xaxis, self.cardOrigin_yaxis, 70, 90);
     //[self updateCoordinatesForNextCard];
 
@@ -121,7 +131,14 @@
     card.count = setCard.count;
     
     
-    card.transform = CGAffineTransformMakeScale(self.scale, self.scale);
+    card.transform = CGAffineTransformMakeScale(self.scale,self.scale);
+    card.center = CGPointMake(self.cardOrigin_xaxis + card.frame.size.width / 2, self.cardOrigin_yaxis + card.frame.size.height / 2);
+    /*
+    
+    CGPoint center = card.center;
+    card.transform = CGAffineTransformMakeScale(2, 2);
+    card.center = center;
+    */
     self.cardWidth = card.frame.size.width;
     self.cardHeight = card.frame.size.height;
     
@@ -157,15 +174,25 @@
 
 - (void) reDisplaySingleCard:(SetCardView *)cardView {
     [self updateCoordinatesForCardWithSize:CGSizeMake(self.cardWidth, self.cardHeight) horizontalSpacing:GAP_BETWEEN_CARDS_X verticalSpacing:GAP_BETWEEN_CARDS_Y];
+    NSLog(@"--card size, x %d, y %d", self.cardWidth, self.cardHeight);
+    //NSLog(@"update cordinates result x %d, y%d", self.cardOrigin_xaxis, self.cardOrigin_yaxis);
     CGPoint origin = CGPointMake(self.cardOrigin_xaxis, self.cardOrigin_yaxis);
     [UIView animateWithDuration:0.5f animations:^{
         cardView.center = CGPointMake(origin.x + cardView.frame.size.width / 2, origin.y + cardView.frame.size.height / 2);
     }];
 }
 
+- (void) resetGlobalVals {
+    self.cardOrigin_xaxis = LEFT_PADDING;
+    self.cardOrigin_yaxis = TOP_PADDING;
+    self.screenWidthRemaining = self.displayArea.frame.size.width;
+    self.screenHeightRemaining = self.displayArea.frame.size.height;
+    self.numberOfCardsInRow = 1;
+    self.numberOfCardsInCol = 1;
+}
 
 - (void) reDisplayAllCards {
-    [self initializeGlobalVariables];
+    [self resetGlobalVals];
     
     for (SetCardView * view in self.cardViews) {
         [self reDisplaySingleCard:view];
@@ -174,7 +201,7 @@
 
 - (void) handleSingleTap:(UITapGestureRecognizer *)recognizer {
     CGPoint location = [recognizer locationInView:[recognizer.view superview]];
-    
+    NSLog(@"handleTAp : x %d, y %d", self.cardWidth, self.cardHeight);
     
     int column = [self cardIsInColumn:location.x];
     int row = [self cardIsInRow:location.y];
@@ -210,12 +237,13 @@
     int height_remaining = self.screenHeightRemaining;
     int cardOrigin_x = self.cardOrigin_xaxis;
     int cardOrigin_y = self.cardOrigin_yaxis;
-    [self initializeGlobalVariables];
+    [self resetGlobalVals];
     self.screenWidthRemaining = self.displayArea.frame.size.width;
     self.screenHeightRemaining = self.displayArea.frame.size.height;
     self.cardOrigin_xaxis = LEFT_PADDING;
     self.cardOrigin_yaxis = TOP_PADDING;
     
+    NSLog(@"update row : card x %d, y%d", self.cardWidth, self.cardHeight);
     for (int i=0; i<100; i++) {
         [self updateCoordinatesForCardWithSize:CGSizeMake(self.cardWidth, self.cardHeight) horizontalSpacing:GAP_BETWEEN_CARDS_X verticalSpacing:GAP_BETWEEN_CARDS_Y];
         if (self.numberOfCardsInCol ==2) {
@@ -260,11 +288,6 @@
         [self removeCardsAtIndexes:indexesOfMatchedCards];
         [self reDisplayAllCards];
     }
-    
-    int match = [[self.game getMatchingSetCards] count];
-    //NSLog(@"..... %d", match);
-    //self.addMoreCards.enabled = (match != 3) ? YES : NO;
-    [self.statusLabel setText:[self.game getStatusMessage]];
 }
 
 //---- ----- ---- ----- ----- ------ -----
@@ -299,7 +322,7 @@
     self.screenHeightRemaining = height_remaining;
     self.cardOrigin_xaxis = cardOrigin_x;
     self.cardOrigin_yaxis =cardOrigin_y;
-    NSLog(@"Can place %d cards", count);
+    //NSLog(@"Can place %d cards", count);
     return TRUE;
 }
 
