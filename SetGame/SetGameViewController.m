@@ -42,8 +42,8 @@
 
 @implementation SetGameViewController
 
-# define GAP_BETWEEN_CARDS_X 5
-# define GAP_BETWEEN_CARDS_Y 5
+# define GAP_BETWEEN_CARDS_X 2
+# define GAP_BETWEEN_CARDS_Y 2
 # define LEFT_PADDING 0
 # define TOP_PADDING 0
 
@@ -469,7 +469,7 @@
 }
 
 - (SetGame *) game {
-    if (!_game) _game = [[SetGame alloc] initSetGamewithCardCount:12 usingDeck:self.deck];
+    if (!_game) _game = [[SetGame alloc] initSetGamewithCardCount:15 usingDeck:self.deck];
     return _game;
 }
 

@@ -57,6 +57,10 @@
         } else {
             break; }
     }
+    if([newCards count] == 0) {
+        self.statusMsg = @"No more cards in the deck";
+        NSLog(@"No more cards in the deck");
+    }
     return newCards;
 }
 
